@@ -17,7 +17,7 @@ def swagger_response(*, name, success, code, message, data=None):
             success = success,
             code = code,
             message = message,
-            data = data
+            data = {} if data is None else data
         ),
         response_only = True,
         media_type = "application/json",

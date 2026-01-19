@@ -41,20 +41,20 @@ class LoginView(APIView):
     throttle_classes = [OTPLoginThrottle]
 
     @extend_schema(
-        summary = "Login with phone or email",
-        description = "Login with email or phone. Sends OTP to the given email or phone",
+        summary = "Request OTP (email or phone)",
+        description = "Request a one-time password (OTP) using an email address or phone number. Exactly one of them is required.",
         request = LoginSerializers,
         tags = ["Auth"],
         responses = {
             status.HTTP_200_OK : OpenApiResponse(
                 response = LoginResponseSerializers,
-                description = "Login successful",
+                description = "OTP sent",
                 examples = [
                     swagger_response(
                         name = "Login success with email",
                         success = True,
                         code = status.HTTP_200_OK,
-                        message = "OTP has been send to your email",
+                        message = "OTP has been sent to your email",
                         data={
                             "username":"bebelet_user"
                         }
@@ -63,7 +63,7 @@ class LoginView(APIView):
                         name = "Login success with phone",
                         success = True,
                         code = status.HTTP_200_OK,
-                        message = "OTP has been send to your phone",
+                        message = "OTP has been sent to your phone",
                         data = {
                             "username":"bebelet_user"
                         }
@@ -72,41 +72,41 @@ class LoginView(APIView):
             ),
             status.HTTP_400_BAD_REQUEST : OpenApiResponse(
                 response = LoginResponseSerializers,
-                description = "Login Error",
+                description = "Validation error",
                 examples = [
                     swagger_response(
-                        name="email and phone both exist",
+                        name="Email and phone provided",
                         success=False,
                         code=status.HTTP_400_BAD_REQUEST,
-                        message="You need to use only one(email or phone)",
+                        message="Provide only one: email or phone.",
                         data = {}
                     ),
                     swagger_response(
                         name="email is not valid",
                         success=False,
                         code=status.HTTP_400_BAD_REQUEST,
-                        message="You need to enter a valid email",
+                        message="Please provide a valid email address.",
                         data = {}
                     ),
                     swagger_response(
                         name="phone is not valid",
                         success=False,
                         code=status.HTTP_400_BAD_REQUEST,
-                        message="You need to enter a valid phone number",
+                        message="Please provide a valid phone number.",
                         data = {}
                     ),
                     swagger_response(
                         name="email and phone are missing",
                         success=False,
                         code=status.HTTP_400_BAD_REQUEST,
-                        message="email or phone is required",
+                        message="Email or phone is required.",
                         data = {},
                     )
                 ]
             ),
             status.HTTP_403_FORBIDDEN : OpenApiResponse(
                 response = LoginResponseSerializers,
-                description = "Permission Error",
+                description = "User is inactive",
                 examples = [
                     swagger_response(
                         name="User not active",
@@ -119,19 +119,19 @@ class LoginView(APIView):
             ),
             status.HTTP_429_TOO_MANY_REQUESTS : OpenApiResponse(
                 response = True,
-                description = "Too many attempts",
+                description = "Too many requests",
                 examples = [
                     swagger_response(
                         name="There is an active OTP",
                         success=False,
                         code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        message="OTP has already been send",
+                        message="Active OTP already exists.",
                         data = {
                             "username": "2026cARG1-kvJP1"
                         },
                     ),
                     swagger_response(
-                        name="Many request",
+                        name="Too many requests.",
                         success=False,
                         code=status.HTTP_429_TOO_MANY_REQUESTS,
                         message="Too many requests. Try again in 59 seconds.",
@@ -156,7 +156,7 @@ class LoginView(APIView):
                 payload = build_response(
                     success = False,
                     code = status.HTTP_400_BAD_REQUEST,
-                    message = "You need to use only one(email or phone)",
+                    message = "Provide only one: email or phone.",
                 )
                 return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             
@@ -168,7 +168,7 @@ class LoginView(APIView):
                     payload = build_response(
                         success=False,
                         code=status.HTTP_400_BAD_REQUEST,
-                        message="You need to enter a valid email"
+                        message="Please provide a valid email address."
                     )
                     return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -179,7 +179,7 @@ class LoginView(APIView):
                     payload = build_response(
                         success=False,
                         code=status.HTTP_400_BAD_REQUEST,
-                        message="You need to enter a valid phone number"
+                        message="Please provide a valid phone number."
                     )
                     return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -199,7 +199,7 @@ class LoginView(APIView):
                 payload = build_response(
                     success = False,
                     code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    message="OTP has already been send",
+                    message="Active OTP already exists.",
                     data=data
                 )
                 return Response(payload, status=status.HTTP_429_TOO_MANY_REQUESTS)
@@ -215,7 +215,7 @@ class LoginView(APIView):
                 payload = build_response(
                     success=True,
                     code=status.HTTP_200_OK,
-                    message="OTP has been send to your email",
+                    message="OTP has been sent to your email",
                     data=data
                 )
 
@@ -226,7 +226,7 @@ class LoginView(APIView):
                 payload = build_response(
                     success=True,
                     code=status.HTTP_200_OK,
-                    message="OTP has been send to your phone",
+                    message="OTP has been sent to your phone",
                     data=data
                 )
 
@@ -236,7 +236,7 @@ class LoginView(APIView):
             payload = build_response(
                 success=False,
                 code=status.HTTP_400_BAD_REQUEST,
-                message="email or phone is required"
+                message="Email or phone is required."
             )
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -246,14 +246,14 @@ class OTPView(APIView):
     throttle_classes = [OTPLoginThrottle]
 
     @extend_schema(
-            summary = "OTP verification",
-            description = "Confirming auth with OTP code",
+            summary = "Verify OTP",
+            description = "Verify the OTP code and complete authentication.",
             request = OTPSerializers,
             tags = ["Auth"],
             responses = {
                 status.HTTP_200_OK : OpenApiResponse(
                     response = AuthSuccessSerializers,
-                    description = "OTP Verification Success",
+                    description = "OTP verified",
                     examples = [
                         swagger_response(
                             name = "Login confirmation with OTP",
@@ -274,51 +274,51 @@ class OTPView(APIView):
                 ),
                 status.HTTP_400_BAD_REQUEST : OpenApiResponse(
                     response = AuthSuccessSerializers,
-                    description = "OTP Verification Error",
+                    description = "Invalid OTP or validation error",
                     examples = [
                         swagger_response(
                             name = "username is missing",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "username is required",
+                            message = "Username is required.",
                             data = {}
                         ),
                         swagger_response(
                             name = "otp is missing",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "otp is required",
+                            message = "OTP is required.",
                             data = {},
                         ),
                         swagger_response(
-                            name = "otp is not string",
+                            name = "OTP must be a string",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "otp must be an string",
+                            message = "OTP must be a string.",
                             data = {},
                         ),
                         swagger_response(
-                            name = "username is not valid",
+                            name = "Invalid username.",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "username is not valid",
+                            message = "Invalid username.",
                             data = {}
                         ),
                         swagger_response(
                             name = "Invalid OTP",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "Invalid or expired OTP",
+                            message = "Invalid or expired OTP.",
                             data = {}
                         )
                     ]
                 ),
                 status.HTTP_429_TOO_MANY_REQUESTS : OpenApiResponse(
                     response = AuthSuccessSerializers,
-                    description = "Too many attempts",
+                    description = "Too many requests",
                     examples = [
                         swagger_response(
-                            name="Many request",
+                            name="Too many requests",
                             success=False,
                             code=status.HTTP_429_TOO_MANY_REQUESTS,
                             message="Too many requests. Try again in 59 seconds.",
@@ -340,7 +340,7 @@ class OTPView(APIView):
             payload = build_response(
                 success=False,
                 code=status.HTTP_400_BAD_REQUEST,
-                message="username is required"
+                message="Username is required."
             )
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
@@ -348,7 +348,7 @@ class OTPView(APIView):
             payload = build_response(
                 success = False,
                 code = status.HTTP_400_BAD_REQUEST,
-                message="otp is required"
+                message="OTP is required."
             )
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -356,7 +356,7 @@ class OTPView(APIView):
             payload = build_response(
                 success = False,
                 code = status.HTTP_400_BAD_REQUEST,
-                message = "otp must be an string"
+                message = "OTP must be a string."
             )
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -367,7 +367,7 @@ class OTPView(APIView):
             payload = build_response(
                 success = False,
                 code = status.HTTP_400_BAD_REQUEST,
-                message = "username is not valid"
+                message = "Invalid username."
             )
 
         print("User:", user_instance)
@@ -391,14 +391,14 @@ class OTPView(APIView):
             response = Response(payload, status.HTTP_200_OK)
             set_access_cookie(response, access)
             set_refresh_cookie(response, str(refresh))
-            #otp_instance.delete()
+            otp_instance.delete()
             return response
             
         except OTP.DoesNotExist:
             payload = build_response(
                 success = False,
                 code = status.HTTP_400_BAD_REQUEST,
-                message = "Invalid or expired OTP"
+                message = "Invalid or expired OTP."
             )
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -409,20 +409,20 @@ class GoogleLoginView(APIView):
     throttle_classes = [OTPLoginThrottle]
 
     @extend_schema(
-            summary = "Google Login",
-            description = "Logging in with googleAuth",
+            summary = "Login with Google",
+            description = "Authenticate using a Google ID token.",
             request = GoogleLoginSerializer,
             tags = ["Auth"],
             responses = {
                 status.HTTP_200_OK : OpenApiResponse(
                     response = True,
-                    description = "OTP Verification Success",
+                    description = "Google login successful",
                     examples = [
                         swagger_response(
                             name = "Login with Google Auth",
                             success = True,
                             code = status.HTTP_200_OK,
-                            message = "The login with google was successful",
+                            message = "Google login was successful.",
                             data = {
                                 "id": 1,
                                 "username": "bebelet_user",
@@ -436,37 +436,37 @@ class GoogleLoginView(APIView):
                 ),
                 status.HTTP_400_BAD_REQUEST : OpenApiResponse(
                     response = True,
-                    description = "OTP Verification Error",
+                    description = "Google token validation failed",
                     examples = [
                         swagger_response(
-                            name = "iss is missing",
+                            name = "Invalid token issuer (iss)",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "Invalid iss",
+                            message = "Invalid token issuer (iss).",
                             data = {}
                         ),
                         swagger_response(
                             name = "email is not verified",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "Google email not verified",
+                            message = "Google email not verified.",
                             data = {}
                         ),
                         swagger_response(
                             name = "email is not found",
                             success = False,
                             code = status.HTTP_400_BAD_REQUEST,
-                            message = "Email not found",
+                            message = "Email not found in Google token.",
                             data = {}
                         ),
                     ]
                 ),
                 status.HTTP_429_TOO_MANY_REQUESTS : OpenApiResponse(
                     response = True,
-                    description = "Too many attempts",
+                    description = "Too many requests",
                     examples = [
                         swagger_response(
-                            name="Many request",
+                            name="Too many requests.",
                             success=False,
                             code=status.HTTP_429_TOO_MANY_REQUESTS,
                             message="Too many requests. Try again in 59 seconds.",
@@ -494,7 +494,7 @@ class GoogleLoginView(APIView):
                 payload = build_response(
                     success=False, 
                     code=status.HTTP_400_BAD_REQUEST, 
-                    message="Invalid iss"
+                    message="Invalid token issuer (iss)."
                 )
                 return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -502,7 +502,7 @@ class GoogleLoginView(APIView):
                 payload = build_response(
                     success=False, 
                     code=status.HTTP_400_BAD_REQUEST, 
-                    message="Google email not verified"
+                    message="Google email not verified."
                 )
                 return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -515,7 +515,7 @@ class GoogleLoginView(APIView):
                 payload = build_response(
                     success=False, 
                     code=status.HTTP_400_BAD_REQUEST, 
-                    message="Email not found"
+                    message="Email not found in Google token."
                 )
                 return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
@@ -533,7 +533,7 @@ class GoogleLoginView(APIView):
             payload = build_response(
                 success=True, 
                 code=status.HTTP_200_OK, 
-                message="The login with google was successful",
+                message="Google login was successful.",
                 data = {
                     "id" : user_instance.id,
                     "username" : user_instance.username,
@@ -553,13 +553,13 @@ class RefreshView(APIView):
     permission_classes = []
 
     @extend_schema(
-            summary = "Refresh",
-            description = "Refresh Access Token",
+            summary = "Refresh access token",
+            description = "Issue a new access token using the refresh token cookie.",
             tags = ["Auth"],
             responses = {
                 status.HTTP_200_OK : OpenApiResponse(
                     response = True,
-                    description = "Token Refresh Success",
+                    description = "Token refreshed",
                     examples = [
                         swagger_response(
                             name = "Token Refreshed",
@@ -572,13 +572,13 @@ class RefreshView(APIView):
                 ),
                 status.HTTP_401_UNAUTHORIZED : OpenApiResponse(
                     response = True,
-                    description = "OTP Verification Error",
+                    description = "Invalid or missing refresh token",
                     examples = [
                         swagger_response(
                             name = "Refresh token is missing",
                             success = False,
                             code = status.HTTP_401_UNAUTHORIZED,
-                            message = "Authentication credentials were not provided.",
+                            message = "Refresh token cookie is missing.",
                             data = {}
                         ),
                         swagger_response(
@@ -599,7 +599,7 @@ class RefreshView(APIView):
             payload = build_response(
                 success = False,
                 code = status.HTTP_401_UNAUTHORIZED,
-                message="Authentication credentials were not provided."
+                message="Refresh token cookie is missing."
             )
             return Response(payload, status=status.HTTP_401_AUTHORIZED)
 
@@ -632,15 +632,16 @@ class MeView(APIView):
 
     @extend_schema(
             summary = "User Info",
-            description = "Gettings authenticated user information",
+            description = "Get authenticated user information.",
             tags = ["Auth"],
+            auth=[{"cookieAuth": []}],
             responses = {
                 status.HTTP_200_OK : OpenApiResponse(
                     response = True,
-                    description = "Me Success",
+                    description = "User info",
                     examples = [
                         swagger_response(
-                            name = "Getting user info",
+                            name = "Get user info",
                             success = True,
                             code = status.HTTP_200_OK,
                             message = "User info retrieved successfully",
@@ -653,7 +654,7 @@ class MeView(APIView):
                 ),
                 status.HTTP_403_FORBIDDEN : OpenApiResponse(
                     response = True,
-                    description = "Me Error",
+                    description = "Authentication required.",
                     examples = [
                         swagger_response(
                             name = "Unauthenticated User",
@@ -689,12 +690,13 @@ class ProfileMeView(APIView):
      
     @extend_schema(
         summary = "Profile",
-        description = "Gettings profile",
+        description = "Get profile.",
         tags = ["Auth"],
+        auth=[{"cookieAuth": []}],
         responses = {
             status.HTTP_200_OK : OpenApiResponse(
                 response = True,
-                description = "Get profile success",
+                description = "Get profile",
                 examples = [
                     swagger_response(
                         name = "Getting user info",
@@ -712,7 +714,7 @@ class ProfileMeView(APIView):
             ),
             status.HTTP_404_NOT_FOUND : OpenApiResponse(
                 response = True,
-                description = "Get profile error response",
+                description = "Get profile error",
                 examples = [
                     swagger_response(
                         name = "User not found",
@@ -763,8 +765,9 @@ class ProfileMeView(APIView):
     @extend_schema(
         summary = "Profile",
         request = AccountProfileSerializer,
-        description = "Updating profile",
+        description = "Update profile",
         tags = ["Auth"],
+        auth=[{"cookieAuth": []}],
         responses = {
             status.HTTP_200_OK : OpenApiResponse(
                 response = True,
@@ -784,10 +787,10 @@ class ProfileMeView(APIView):
                 description = "Update profile error response",
                 examples = [
                     swagger_response(
-                        name = "Invalid baby_gender",
+                        name = "Invalid baby_gender value.",
                         success = False,
                         code = status.HTTP_400_BAD_REQUEST,
-                        message = "Invalid baby_gender",
+                        message = "Invalid baby_gender value.",
                         data = {}
                     ),
                     swagger_response(
@@ -859,7 +862,7 @@ class ProfileMeView(APIView):
                         payload = api_response(
                             success=False,
                             code=status.HTTP_400_BAD_REQUEST,
-                            message="Invalid baby_gender",
+                            message="Invalid baby_gender value.",
                         )
 
                         return Response(
@@ -938,7 +941,7 @@ class ProfileMeView(APIView):
                     payload = api_response(
                         success=True,
                         code=status.HTTP_200_OK,
-                        message="OTP has been send to your email",
+                        message="OTP has been sent to your email",
                         data={"username": user.username},
                     )
                     return Response(payload, status=status.HTTP_200_OK)
@@ -990,7 +993,7 @@ class ProfileMeView(APIView):
                     payload = api_response(
                         success=True,
                         code=status.HTTP_200_OK,
-                        message="OTP has been send to your phone",
+                        message="OTP has been sent to your phone",
                         data={"username": user.username},
                     )
                     return Response(payload, status=status.HTTP_200_OK)
@@ -1018,6 +1021,7 @@ class AgreementListView(APIView):
         summary = "Agreement List",
         description = "List all active agreements. Optional: filter by type (terms, privacy, contract).",
         tags = ["Auth"],
+        auth=[{"cookieAuth": []}],
         parameters = [
             OpenApiParameter(
                 name="type",
@@ -1080,6 +1084,7 @@ class PendingAgreementListView(APIView):
         summary = "Pending Agreement List",
         description = "List all active agreements the current user has NOT yet accepted.",
         tags = ["Auth"],
+        auth=[{"cookieAuth": []}],
         responses = {
             status.HTTP_200_OK : OpenApiResponse(
                 response = True,
@@ -1139,11 +1144,12 @@ class AcceptAgreementsView(APIView):
         summary = "Accept Agreements",
         description = "Accept one or more agreements by ID",
         tags = ["Auth"],
+        auth=[{"cookieAuth": []}],
         request= AcceptAgreementsSerializer,
         responses = {
             status.HTTP_200_OK : OpenApiResponse(
                 response = True,
-                description = "Accept aggrements by ID",
+                description = "Accept agreements by ID",
                 examples = [
                     swagger_response(
                         name = "Agreements accepted successfully",
@@ -1162,7 +1168,7 @@ class AcceptAgreementsView(APIView):
                 examples = [
                     swagger_response(
                         name = "No new agreements to accept",
-                        success = True,
+                        success = False,
                         code = status.HTTP_404_NOT_FOUND,
                         message = "No new agreements to accept",
                         data = {
@@ -1236,16 +1242,16 @@ class LogoutView(APIView):
 
 
     @extend_schema(
-        summary = "User Info",
-        description = "Gettings authenticated user information",
+        summary = "Logout",
+        description = "Log out the current user by clearing authentication cookies.",
         tags = ["Auth"],
         responses = {
             status.HTTP_200_OK : OpenApiResponse(
                 response = True,
-                description = "Me Success",
+                description = "Logout successful",
                 examples = [
                     swagger_response(
-                        name = "Logout Success",
+                        name = "Logged out successfully",
                         success = True,
                         code = status.HTTP_200_OK,
                         message = "Logged out successfully",
@@ -1258,7 +1264,7 @@ class LogoutView(APIView):
                 description = "Already Logged Out",
                 examples = [
                     swagger_response(
-                        name = "Unauthenticated User",
+                        name = "Already logged out",
                         success = False,
                         code = status.HTTP_406_NOT_ACCEPTABLE,
                         message = "Already logged out",

@@ -50,6 +50,8 @@ INSTALLED_APPS = [
 
     "apps.authentication",
     "apps.category",
+    "apps.region",
+    "apps.salepost"
 ]
 
 MIDDLEWARE = [
@@ -155,6 +157,19 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Bebelet API',
     'DESCRIPTION': 'Bebelet API Documentation',
     "VERSION": "1.0.0",
+
+    "SECURITY": [],
+
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "cookieAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "access_token",
+                "description": "JWT access token (HttpOnly cookie) => access_token",
+            }
+        }
+    },
 }
 
 CHANNEL_LAYERS = {
@@ -182,6 +197,7 @@ AUTH_COOKIE_SAMESITE = "Lax"
 
 OTP_EXPIRY_MINUTES = 15
 OTP_LENGTH = 4
+MAX_NUM_OF_IMAGES_PER_SALEPOST = 10
 
 
 CLOUDINARY_CLOUD_NAME=config("CLOUDINARY_CLOUD_NAME", default="")
