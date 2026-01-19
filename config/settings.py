@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     "apps.authentication",
     "apps.category",
     "apps.region",
-    "apps.salepost"
+    "apps.salepost",
+    "apps.message",
 ]
 
 MIDDLEWARE = [

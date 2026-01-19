@@ -1,3 +1,4 @@
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -29,6 +30,10 @@ class SalePostViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action == "create":
             return [IsAuthenticated(), HasPerm("salepost.add_salepost")]
+        elif self.action == "update":
+            return [IsAuthenticated(), HasPerm("salepost.change_salepost")]
+        elif self.action == "destroy":
+            return [IsAuthenticated(), HasPerm("salepost.delete_salepost")]
         else:
             return []
 
@@ -798,6 +803,8 @@ class SalePostViewSet(ModelViewSet):
 
         return Response(payload, status=status.HTTP_201_CREATED)
 
+    
+    #Update endpoint
     @extend_schema(
         summary="Salepost Updated",
         description="Update Salepost",
@@ -1040,9 +1047,76 @@ class SalePostViewSet(ModelViewSet):
             )
             return Response(payload, status=status.HTTP_404_NOT_FOUND)
 
-"""
-class SalePostHomeViewSet(ViewSet):
-    def list(self, request):
+
+class SalePostHomeView(APIView):
+    permission_classes = []
+
+
+    @extend_schema(
+        summary="Salepost list",
+        description="Retrieve salepost",
+        tags = ["Salepost"],
+        parameters = [
+            OpenApiParameter(
+                name="min_usage",
+                required=False,
+                type=OpenApiTypes.INT,
+                description="Filter by min_usage.",
+            ),
+            OpenApiParameter(
+                name="max_usage",
+                required=False,
+                type=OpenApiTypes.INT,
+                description="Filter by max_usage.",
+            ),
+            OpenApiParameter(
+                name="gender",
+                required=False,
+                type=OpenApiTypes.STR,
+                description="Filter by gender.",
+            )
+        ],
+        responses = {
+            status.HTTP_200_OK : OpenApiResponse(
+                response = True,
+                description = "Salepost retrieved.",
+                examples = [
+                    swagger_response(
+                        name="Salepost retrived successfully",
+                        success=True,
+                        code=status.HTTP_200_OK,
+                        message="Salepost retrived successfully."
+                    ),
+                ]
+            ),
+            status.HTTP_400_BAD_REQUEST : OpenApiResponse(
+                response = True,
+                description = "Salepost retrieved error.",
+                examples = [
+                    swagger_response(
+                        name="min_usage and max_usage must be integers",
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="min_usage and max_usage must be integers."
+                    ),
+                    swagger_response(
+                        name="min_usage must be an integer",
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="min_usage must be an integer."
+                    ),
+                    swagger_response(
+                        name="max_usage must be an integer",
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="max_usage must be an integer."
+                    ),
+                ]
+            )
+        }
+
+    )
+    def get(self, request):
         min_usage = request.data.get('min_usage')
         max_usage = request.data.get('max_usage')
         gender = request.data.get('gender')
@@ -1053,17 +1127,32 @@ class SalePostHomeViewSet(ViewSet):
                 if isinstance(min_usage, int) and isinstance(max_usage, int):
                     latest_posts = SalePost.objects.filter(post_status='published', salepostattribute__in=gender_posts, min_usage_range__gte=min_usage, max_usage_range__lte=max_usage).order_by('-posted_at')[:16]
                 else:
-                    Response({"error": "min_usage and max_usage must be integers."}, status=status.HTTP_400_BAD_REQUEST)
+                    payload = build_response(
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="min_usage and max_usage must be integers."
+                    )
+                    Response(payload, status=status.HTTP_400_BAD_REQUEST)
             elif min_usage and not max_usage:
                 if isinstance(min_usage, int):
                     latest_posts = SalePost.objects.filter(post_status='published', salepostattribute__in=gender_posts, min_usage_range__gte=min_usage).order_by('-posted_at')[:16]
                 else:
-                    return Response({"error": "min_usage must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+                    payload = build_response(
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="min_usage must be an integer."
+                    )
+                    return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             elif not min_usage and max_usage:
                 if isinstance(max_usage, int):
                     latest_posts = SalePost.objects.filter(post_status='published', salepostattribute__in=gender_posts, max_usage_range__lte=max_usage).order_by('-posted_at')[:16]
                 else:
-                    return Response({"error": "max_usage must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+                    payload = build_response(
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="max_usage must be an integer."
+                    )
+                    return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             else:
                 latest_posts = SalePost.objects.filter(post_status='published', salepostattribute__in=gender_posts).order_by('-posted_at')[:16]
         
@@ -1073,33 +1162,92 @@ class SalePostHomeViewSet(ViewSet):
                 if isinstance(min_usage, int) and isinstance(max_usage, int):
                     latest_posts = SalePost.objects.filter(post_status='published', min_usage_range__gte=min_usage, max_usage_range__lte=max_usage).order_by('-posted_at')[:16]
                 else:
-                    return Response({"error": "min_usage and max_usage must be integers."}, status=status.HTTP_400_BAD_REQUEST)
+                    payload = build_response(
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="min_usage and max_usage must be integers."
+                    )
+                    return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             elif min_usage and not max_usage:
                 if isinstance(min_usage, int):
                     latest_posts = SalePost.objects.filter(post_status='published', min_usage_range__gte=min_usage).order_by('-posted_at')[:16]
                 else:
-                    return Response({"error": "min_usage must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+                    payload = build_response(
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="min_usage must be an integer."
+                    )
+                    return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             elif not min_usage and max_usage:
                 if isinstance(max_usage, int):
                     latest_posts = SalePost.objects.filter(post_status='published', max_usage_range__lte=max_usage).order_by('-posted_at')[:16]
                 else:
-                    return Response({"error": "max_usage must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+                    payload = build_response(
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="max_usage must be an integer."
+                    )
+                    return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             else:
                 latest_posts = SalePost.objects.filter(post_status='published').order_by('-posted_at')[:16]
                 serializer = SalePostListSerializer(latest_posts, many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-"""
+                payload = build_response(
+                    success=True,
+                    code=status.HTTP_200_OK,
+                    message="Salepost retrived successfully",
+                    data = serializer.data
+                )
+                return Response(payload, status=status.HTTP_200_OK)
 
-"""
-class SalePostSimilarViewSet(ViewSet):
-    def retrieve(self, request, pk=None):
+                
+
+class SalePostSimilarView(APIView):
+    permission_classes = []
+
+    @extend_schema(
+        summary="Similar Salepost List",
+        description="Get Similar Saleposts",
+        tags=["Salepost"],
+        responses = {
+            status.HTTP_200_OK : OpenApiResponse(
+                response=True,
+                description="Similar Salepost",
+                examples = [
+                    swagger_response(
+                        name="Salepost retrived successfully",
+                        success=True,
+                        code=status.HTTP_200_OK,
+                        message="Salepost retrived successfully."
+                    )
+                ]
+            ),
+            status.HTTP_404_NOT_FOUND : OpenApiResponse(
+                response=True,
+                description="Similar Salepost Error",
+                examples = [
+                    swagger_response(
+                        name="SalePost not found, cannot provide related posts",
+                        success=False,
+                        code=status.HTTP_404_NOT_FOUND,
+                        message="SalePost not found, cannot provide related posts."
+                    )
+                ]
+            )
+        }
+    )
+    def get(self, request, public_id=None):
         MAX_RESPONSE_LENGTH = 5
         response_list = []
         # lets first grab the post with the provided id 
         try:
             sale_post_instance = SalePost.objects.get(post_id=pk)
         except SalePost.DoesNotExist:
-            return Response({"error": "SalePost not found, cannot provide related posts"}, status=status.HTTP_404_NOT_FOUND)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_404_NOT_FOUND,
+                message="SalePost not found, cannot provide related posts"
+            )
+            return Response(payload, status=status.HTTP_404_NOT_FOUND)
         
 
         # our post has this category instance
@@ -1111,7 +1259,13 @@ class SalePostSimilarViewSet(ViewSet):
         
         if (len(list_of_posts_with_same_category) == MAX_RESPONSE_LENGTH):
             serializer = SalePostListSerializer(list_of_posts_with_same_category, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            payload = build_response(
+                success=True,
+                code=status.HTTP_200_OK,
+                message="Salepost retrived successfully",
+                data = serializer.data
+            )
+            return Response(payload, status=status.HTTP_200_OK)
 
         
         for i in range(len(list_of_posts_with_same_category)):
@@ -1129,7 +1283,13 @@ class SalePostSimilarViewSet(ViewSet):
             response_list = list(dict.fromkeys(response_list))
             if len(response_list) >= MAX_RESPONSE_LENGTH:
                 serializer = SalePostListSerializer(response_list, many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                payload = build_response(
+                    success=True,
+                    code=status.HTTP_200_OK,
+                    message="Salepost retrived successfully",
+                    data=serializer.data,
+                )
+                return Response(payload, status=status.HTTP_200_OK)
                 
         
         #group C, cousin category posts
@@ -1152,5 +1312,10 @@ class SalePostSimilarViewSet(ViewSet):
                     break
 
         serializer = SalePostListSerializer(response_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-"""
+        payload = build_response(
+            success=True,
+            code=status.HTTP_200_OK,
+            message="Salepost retrived successfully",
+            data=serializer.data
+        )
+        return Response(payload, status=status.HTTP_200_OK)

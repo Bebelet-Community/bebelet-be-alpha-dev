@@ -15,4 +15,5 @@ urlpatterns = [
     path("api/category/", include("apps.category.urls")),
     path("api/region/", include("apps.region.urls")),
     path("api/salepost/", include("apps.salepost.urls")),
+    path("api/message/", include("apps.message.urls")),
 ]
