@@ -32,6 +32,8 @@ class SalePostViewSet(ModelViewSet):
         else:
             return []
 
+
+    #List Endpoint
     @extend_schema(
         summary = "Salepost List",
         description = "Retrive salepost list.",
@@ -41,39 +43,39 @@ class SalePostViewSet(ModelViewSet):
                 name="user_latitude",
                 required=False,
                 type=OpenApiTypes.FLOAT,
-                description="Filter saleposts by user latitude.",
+                description="User latitude for distance filtering/sorting.",
             ),
             OpenApiParameter(
                 name="user_longitude",
                 required=False,
                 type=OpenApiTypes.FLOAT,
-                description="Filter saleposts by user longitude.",
+                description="User longitude for distance filtering/sorting.",
             ),
             OpenApiParameter(
                 name="user_region_id",
                 required=False,
                 type=OpenApiTypes.INT,
-                description="Filter saleposts by user region id.",
+                description="User region id to derive latitude/longitude.",
             ),
             OpenApiParameter(
                 name="max_distance",
                 required=False,
-                type=OpenApiTypes.INT,
-                description="Filter saleposts by max distance.",
+                type=OpenApiTypes.FLOAT,
+                description="Max distance in km (used with distance filtering).",
             ),
             OpenApiParameter(
                 name="sort_by",
                 required=False,
                 type=OpenApiTypes.STR,
                 enum=["published_at", "distance", "price"],
-                description="Ordering saleposts"
+                description="Sort field."
             ),
             OpenApiParameter(
                 name="order",
                 required=False,
                 type=OpenApiTypes.STR,
                 enum=["asc", "desc"],
-                description="Ordering saleposts"
+                description="Sort order."
             ),
             OpenApiParameter(
                 name="category_ids",
@@ -85,31 +87,31 @@ class SalePostViewSet(ModelViewSet):
                 name="region_ids",
                 required=False,
                 type=OpenApiTypes.STR,
-                description="Comma separated category ids. Example: 1,2,3",
+                description="Comma separated region ids. Example: 1,2,3",
             ),
             OpenApiParameter(
                 name="price_min",
                 required=False,
                 type=OpenApiTypes.FLOAT,
-                description="Filter saleposts by user longitude.",
+                description="Minimum price.",
             ),
             OpenApiParameter(
                 name="price_max",
                 required=False,
                 type=OpenApiTypes.FLOAT,
-                description="Filter saleposts by user longitude.",
+                description="Maximum price.",
             ),
             OpenApiParameter(
                 name="published_last_days",
                 required=False,
-                type=OpenApiTypes.FLOAT,
-                description="Filter saleposts by user longitude.",
+                type=OpenApiTypes.INT,
+                description="Show posts published in last N days.",
             ),
             OpenApiParameter(
                 name="keyword",
                 required=False,
                 type=OpenApiTypes.STR,
-                description="Comma separated category ids. Example: 1,2,3",
+                description="Search in title or description.",
             ),
         ],
         responses = {
@@ -208,7 +210,7 @@ class SalePostViewSet(ModelViewSet):
                 examples = [
                     swagger_response(
                         name = "Salepost not found",
-                        success = True,
+                        success = False,
                         code = status.HTTP_404_NOT_FOUND,
                         message = "Salepost not found.",
                     ),
@@ -378,15 +380,69 @@ class SalePostViewSet(ModelViewSet):
 
         serialized = SalePostListSerializer(posts_sorted, many=True)
         return Response(serialized.data)
-    
 
+
+    #Retrive Endpoint
+    @extend_schema(
+        summary="Salepost Retrieve",
+        description="Retrieve a single salepost by post_id.",
+        tags = ["Salepost"],
+        responses = {
+            status.HTTP_200_OK : OpenApiResponse(
+                response = SalePostListSerializer,
+                description = "Saleposts retrieved.",
+                examples = [
+                    swagger_response(
+                        name = "Saleposts retrieved successfully",
+                        success = True,
+                        code = status.HTTP_200_OK,
+                        message = "Saleposts retrieved successfully.",
+                        data = {
+                            "post_id": 0,
+                            "post_status": "published",
+                            "seller": "bebelet_user",
+                            "category": "Category1",
+                            "region": "Region3",
+                            "post_title": "Salepost1",
+                            "description": "This is a salepost 1",
+                            "posted_at": "2026-01-18T17:56:53Z",
+                            "viewed": 1,
+                            "latitude": None,
+                            "longitude": None,
+                            "product_price": "1.00",
+                            "attributes": None,
+                            "images": None
+                        }
+                    )
+                ]
+            ), 
+            status.HTTP_404_NOT_FOUND : OpenApiResponse(
+                response = True,
+                description="Salepost not found.",
+                examples = [
+                    swagger_response(
+                        name = "Salepost not found",
+                        success = False,
+                        code = status.HTTP_404_NOT_FOUND,
+                        message = "Salepost not found.",
+                    )
+                ]
+            ), 
+        }
+    )
     def retrieve(self, request, pk=None):
         try:
             salepost_instance = SalePost.objects.get(post_id=pk)
             serializer = SalePostListSerializer(salepost_instance)
             salepost_instance.viewed += 1
             salepost_instance.save()
-            return Response(serializer.data)
+            payload = build_response(
+                success = True,
+                code = status.HTTP_200_OK,
+                message = "Salepost retrived successfully",
+                data = serializer.data
+            )
+            return Response(payload, status=status.HTTP_200_OK)
         except SalePost.DoesNotExist:
             payload = build_response(
                 success=False,
@@ -394,8 +450,164 @@ class SalePostViewSet(ModelViewSet):
                 message="Salepost not found"
             )
             return Response(payload, status=status.HTTP_404_NOT_FOUND)
-        
 
+    #Create Endpoint
+    @extend_schema(
+        summary = "Salepost Create",
+        description = "Create salepost",
+        tags = ["Salepost"],
+        parameters = [
+            OpenApiParameter(
+                name="category",
+                required=True,
+                type=OpenApiTypes.INT,
+                description="Category id for new salepost",
+            ),
+            OpenApiParameter(
+                name="region",
+                required=True,
+                type=OpenApiTypes.INT,
+                description="region id for new salepost",
+            ),
+            OpenApiParameter(
+                name="post_title",
+                required=True,
+                type=OpenApiTypes.STR,
+                description="post_title for new salepost",
+            ),
+            OpenApiParameter(
+                name="description",
+                required=True,
+                type=OpenApiTypes.STR,
+                description="description for new salepost",
+            ),
+            OpenApiParameter(
+                name="product_price",
+                required=True,
+                type=OpenApiTypes.FLOAT,
+                description="product_price for new salepost",
+            ),
+            OpenApiParameter(
+                name="latitude",
+                required=True,
+                type=OpenApiTypes.FLOAT,
+                description="latitude for new salepost",
+            ),
+            OpenApiParameter(
+                name="longitude",
+                required=True,
+                type=OpenApiTypes.FLOAT,
+                description="longitude for new salepost",
+            ),
+            OpenApiParameter(
+                name="min_usage",
+                required=False,
+                type=OpenApiTypes.INT,
+                description="min_usage id for new salepost",
+            ),
+            OpenApiParameter(
+                name="max_usage",
+                required=False,
+                type=OpenApiTypes.INT,
+                description="max_usage id for new salepost",
+            ),
+        ],
+        responses = {
+            status.HTTP_201_CREATED : OpenApiResponse(
+                response=True,
+                description="Create Salepost",
+                examples=[
+                    swagger_response(
+                        name="Salepost has been created",
+                        success=True,
+                        code=status.HTTP_201_CREATED,
+                        message="Salepost has been created",
+                        data = {
+                            "postId": "000000",
+                        }
+                    )
+                ]
+            ),
+            status.HTTP_400_BAD_REQUEST : OpenApiResponse(
+                response=True,
+                description="Create Salepost Error",
+                examples = [
+                    swagger_response(
+                        name = "Min usage range id is not valid",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Min usage range id is not valid."
+                    ),
+                    swagger_response(
+                        name = "Max usage range id is not valid",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Max usage range id is not valid."
+                    ),
+                    swagger_response(
+                        name = "Min usage range must be less than or equal to max usage range",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Min usage range must be less than or equal to max usage range."
+                    ),
+                    swagger_response(
+                        name = "Category id is not valid",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Category id is not valid."
+                    ),
+                    swagger_response(
+                        name = "Region id is not valid",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Region id is not valid."
+                    ),
+                    swagger_response(
+                        name = "Product price is required and must be a number",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Product price is required and must be a number."
+                    ),
+                    swagger_response(
+                        name = "Product price cannot be negative",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Product price cannot be negative."
+                    ),
+                    swagger_response(
+                        name = "Invalid latitude or longitude",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Invalid latitude or longitude."
+                    ),
+                    swagger_response(
+                        name = "Invalid latitude or longitude",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Latitude or longitude out of range."
+                    ),
+                    swagger_response(
+                        name = "Attribute1 is required",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Attribute1 is required."
+                    ),
+                    swagger_response(
+                        name = "Attribute1 must be a number",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Attribute1 must be a number."
+                    ),
+                    swagger_response(
+                        name = "Attribute2 must be a string",
+                        success = False,
+                        code = status.HTTP_400_BAD_REQUEST,
+                        message = "Attribute2 must be a string."
+                    )
+                ]
+            )
+        }
+    )
     def create(self, request):
         postid = generate_unique_post_id()
         seller = request.user
@@ -413,54 +625,108 @@ class SalePostViewSet(ModelViewSet):
             try:
                 min_usage = UsageRange.objects.get(id=min_usage)
             except UsageRange.DoesNotExist:
-                return Response({'error':'Min usage range id is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+                payload = build_response(
+                    success = True,
+                    code = status.HTTP_400_BAD_REQUEST,
+                    message = "Min usage range id is not valid.",
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         else:
             try:
                 min_usage = UsageRange.objects.get(unique_id=-1)
             except UsageRange.DoesNotExist:
-                return Response({'error':'Min usage range id is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+                payload = build_response(
+                    success=False,
+                    code=status.HTTP_400_BAD_REQUEST,
+                    message="Min usage range id is not valid."
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             
         if request.data.get('max_usage'):
             try:
                 max_usage = UsageRange.objects.get(id=max_usage)
             except UsageRange.DoesNotExist:
-                return Response({'error':'Max usage range id is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+                payload=build_response(
+                    success=False,
+                    code=status.HTTP_400_BAD_REQUEST,
+                    message="Max usage range id is not valid.",
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         else:
             try:
                 max_usage = UsageRange.objects.get(unique_id=-1)
             except UsageRange.DoesNotExist:
-                return Response({'error':'Max usage range id is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+                payload = build_response(
+                    success=False,
+                    code=status.HTTP_400_BAD_REQUEST,
+                    message="Max usage range id is not valid."
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             
         if min_usage.unique_id > max_usage.unique_id:
-            return Response({'error':'Min usage range must be less than or equal to max usage range'}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Min usage range must be less than or equal to max usage range."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             category_instance = Category.objects.get(id=category)
-            
         except Category.DoesNotExist:
-            return Response({'error':'Category id is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Category id is not valid."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             region_instance = Region.objects.get(id=region)
         except Region.DoesNotExist:
-            return Response({'error':'Region id is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Region id is not valid."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
         if product_price is None or not isinstance(product_price, (int, float)):
-            return Response({'error':'Product price is required and must be a number'}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Product price is required and must be a number."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
         if product_price < 0:
-            return Response({'error':'Product price cannot be negative'}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Product price cannot be negative."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
 
         try:
             latitude = round(float(latitude), 6)
             longitude = round(float(longitude), 6)
         except ValueError:
-            return Response({"error": "Invalid latitude or longitude."}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Invalid latitude or longitude."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
 
         if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-                return Response({"error": "Latitude or longitude out of range."}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                success=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Latitude or longitude out of range."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
 
         category_attributes = Attribute.objects.filter(categories=category_instance)
@@ -470,16 +736,31 @@ class SalePostViewSet(ModelViewSet):
             att_value = request.data.get(categoryAtt.unique_name)
             
             if not att_value and categoryAtt.is_required:
-                return Response({'error': f'{categoryAtt.unique_name} is required'}, status=status.HTTP_400_BAD_REQUEST)
+                payload = build_response(
+                    success=False,
+                    code=status.HTTP_400_BAD_REQUEST,
+                    message=f"{categoryAtt.unique_name} is required."
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             
             if att_value:
                 if att_obj.data_type == 'number' or  att_obj.data_type == 'choice':
                     if not isinstance(att_value, (int, float)):
-                        return Response({'error': f"{categoryAtt.unique_name} must be a number"}, status=status.HTTP_400_BAD_REQUEST)
+                        payload = build_response(
+                            success=False,
+                            code=status.HTTP_400_BAD_REQUEST,
+                            message=f"{categoryAtt.unique_name} must be a number."
+                        )
+                        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
                 else:
                     if not isinstance(att_value, str):
-                        return Response({'error': f"{categoryAtt.unique_name} must be a string"}, status=status.HTTP_400_BAD_REQUEST)
+                        payload = build_response(
+                            success=False,
+                            code=status.HTTP_400_BAD_REQUEST,
+                            message=f"{categoryAtt.unique_name} must be a string."
+                        )
+                        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
                 """
                 if not ((att_obj.data_type == 'number' or att_obj.data_type == 'choice') and isinstance(att_value, (int, float))):
@@ -490,35 +771,143 @@ class SalePostViewSet(ModelViewSet):
                 """
         
 
-        salepost_obj = SalePost(post_id=postid, seller=seller, category=category_instance, region=region_instance, post_title=post_title, description=description, product_price=product_price, latitude=latitude, longitude=longitude, min_usage=min_usage, max_usage=max_usage)
-        salepost_obj.save()
+        attributes_payload = dict(request.data)
 
-        for categoryAtt in category_attributes:
-            att_obj = Attribute.objects.get(id=categoryAtt.id)
-            att_value = request.data.get(categoryAtt.unique_name)
-            if att_value:
-                salepostAtt_obj = SalePostAttribute(salepost=salepost_obj, attribute=att_obj, value=att_value)
-                salepostAtt_obj.save()
+        salepost_instance = create_salepost_atomic(
+            post_id=postid,
+            seller=seller,
+            category=category_instance,
+            region=region_instance,
+            post_title=post_title,
+            description=description,
+            product_price=product_price,
+            latitude=latitude,
+            longitude=longitude,
+            min_usage=min_usage,
+            max_usage=max_usage,
+            category_attributes=category_attributes,
+            attributes_payload=attributes_payload,
+        )
 
+        payload = build_response(
+            success=True,
+            code=status.HTTP_201_CREATED,
+            message="Salepost has been created.",
+            data={"postId": salepost_instance.post_id},
+        )
 
-        return Response({'success':'Salepost has been created', "postId":postid}, status=status.HTTP_201_CREATED)
-    
+        return Response(payload, status=status.HTTP_201_CREATED)
 
-
+    @extend_schema(
+        summary="Salepost Updated",
+        description="Update Salepost",
+        tags = ["Salepost"],
+        parameters = [
+            OpenApiParameter(
+                name="post_title",
+                required=False,
+                type=OpenApiTypes.STR,
+                description="post title for the salepost"
+            ),
+            OpenApiParameter(
+                name="description",
+                required=False,
+                type=OpenApiTypes.STR,
+                description="description for the salepost"
+            ),
+            OpenApiParameter(
+                name="product_price",
+                required=False,
+                type=OpenApiTypes.FLOAT,
+                description="product price for the salepost"
+            ),
+        ],
+        responses = {
+            status.HTTP_200_OK : OpenApiResponse(
+                response=True,
+                description="Salepost update",
+                examples = [
+                    swagger_response(
+                        name="Salepost has been updated",
+                        success=False,
+                        code=status.HTTP_200_OK,
+                        message="Salepost has been updated."
+                    )
+                ]
+            ),
+            status.HTTP_400_BAD_REQUEST : OpenApiResponse(
+                response=True,
+                description = "Salepost update error",
+                examples = [
+                    swagger_response(
+                        name="Product price is not valid",
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="Product price is not valid."
+                    ),
+                    swagger_response(
+                        name="Attribute1 is required",
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="Attribute1 is required."
+                    ),
+                    swagger_response(
+                        name="Attribute1 is required",
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="Attribute1 must be a number"
+                    ),
+                    swagger_response(
+                        name="Attribute1 is required",
+                        success=False,
+                        code=status.HTTP_400_BAD_REQUEST,
+                        message="Attribute2 must be a string"
+                    )
+                ]
+            ),
+            status.HTTP_401_UNAUTHORIZED : OpenApiResponse(
+                response=True,
+                description = "Salepost access error",
+                examples = [
+                    swagger_response(
+                        name="You have no access to edit",
+                        success=False,
+                        code=status.HTTP_401_UNAUTHORIZED,
+                        message="You have no access to edit."
+                    )
+                ]
+            )
+        }
+    )
     def update(self, request, pk=None):
         post_title = request.data.get('post_title')
         description = request.data.get('description')
         product_price = request.data.get('product_price')
 
         if product_price < 0:
-            return Response({'error':'Product price is not valid'}, status=status.HTTP_400_BAD_REQUEST)
+            payload = build_response(
+                status=False,
+                code=status.HTTP_400_BAD_REQUEST,
+                message="Product price is not valid."
+            )
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             salepost_obj = SalePost.objects.get(id=pk)
             if not salepost_obj.seller == request.user:
-                return Response({'error':'You have no access to edit'}, status=status.HTTP_401_UNAUTHORIZED)
+                payload = build_response(
+                    status=False,
+                    code=status.HTTP_401_UNAUTHORIZED,
+                    message="You have no access to edit"
+                )
+                return Response(payload, status=status.HTTP_401_UNAUTHORIZED)
         except SalePost.DoesNotExist:
-            return Response({'error':'Salepost not found'}, status=status.HTTP_404_NOT_FOUND)
+            payload = build_response(
+                status=False,
+                code=status.HTTP_404_NOT_FOUND,
+                message="Salepost not found"
+            )
+            return Response(payload, status=status.HTTP_404_NOT_FOUND)
 
         if post_title:
             salepost_obj.post_title = post_title
@@ -532,12 +921,27 @@ class SalePostViewSet(ModelViewSet):
             att_obj = Attribute.objects.get(id=categoryAtt.id)
             att_value = request.data.get(categoryAtt.unique_name)
             if not att_value and categoryAtt.is_required:
-                return Response({'error': f'{categoryAtt.unique_name} is required'}, status=status.HTTP_400_BAD_REQUEST)
+                payload = build_response(
+                    success=False,
+                    code=status.HTTP_400_BAD_REQUEST,
+                    message=f'{categoryAtt.unique_name} is required'
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             
             if not ((att_obj.data_type == 'number' or att_obj.data_type == 'choice') and isinstance(att_value, (int, float))):
-                return Response({'error': f"{categoryAtt.unique_name} must be a number"}, status=status.HTTP_400_BAD_REQUEST)
+                payload = build_response(
+                    success=False,
+                    code=status.HTTP_400_BAD_REQUEST,
+                    message=f"{categoryAtt.unique_name} must be a number."
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
             if not (att_obj.data_type == 'text' and isinstance(att_value, str)):
-                return Response({'error': f"{categoryAtt.unique_name} must be a string"}, status=status.HTTP_400_BAD_REQUEST)
+                payload = build_response(
+                    success=False,
+                    code=status.HTTP_400_BAD_REQUEST,
+                    message=f"{categoryAtt.unique_name} must be a string"
+                )
+                return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
         for categoryAtt in category_attributes:
             att_obj = Attribute.objects.get(id=categoryAtt.attribute.id)
@@ -552,19 +956,89 @@ class SalePostViewSet(ModelViewSet):
                     salePostAtt = SalePostAttribute(salepost=salepost_obj, attribute=att_obj, value=att_value)
                     salePostAtt.save()
 
-        return Response({'success':'Salepost has been updated'}, status=status.HTTP_200_OK)
-    
+        payload = build_response(
+            success=True,
+            code=status.HTTP_200_OK,
+            message="Salepost has been updated"
+        )
+        return Response(payload, status=status.HTTP_200_OK)
 
+
+    @extend_schema(
+        summary = "Salepost Partial Update",
+        description = "Not available",
+        tags = ["Salepost"],
+        responses = {
+            status.HTTP_405_METHOD_NOT_ALLOWED : OpenApiResponse(
+                response=True,
+                description="Not available",
+                examples = [
+                    swagger_response(
+                        name="Not available",
+                        success=False,
+                        code=status.HTTP_405_METHOD_NOT_ALLOWED,
+                        message="Partial update endpoint is not available. Please use the update endpoint."
+                    )
+                ]
+            )
+        }
+    )
     def partial_update(self, request, pk=None):
-        return Response({'error':'Partial update endpoint is not available. Please use the update endpoint'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        payload = build_response(
+            success=False,
+            code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            message="Partial update endpoint is not available. Please use the update endpoint"
+        )
+        return Response(payload, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
+    @extend_schema(
+        summary = "Salepost Delete",
+        description = "Delete salepost",
+        tags = ["Salepost"],
+        responses = {
+            status.HTTP_200_OK : OpenApiResponse(
+                response=True,
+                description = "Salepost delete.",
+                examples = [
+                    swagger_response(
+                        name="Salepost deleted successfully",
+                        success=True,
+                        code=status.HTTP_200_OK,
+                        message="Salepost deleted successfully."
+                    )
+                ]
+            ),
+            status.HTTP_404_NOT_FOUND : OpenApiResponse(
+                response=True,
+                description = "Salepost delete.",
+                examples = [
+                    swagger_response(
+                        name="Salepost not found",
+                        success=False,
+                        code=status.HTTP_404_NOT_FOUND,
+                        message="Salepost not found."
+                    )
+                ]
+            )
+        }
+    )
     def destroy(self, request, pk=None):
         try:
             salepost_obj = SalePost.objects.get(post_id=pk)
             salepost_obj.delete()
-            return Response({'success':'Salepost deleted successfully'}, status=status.HTTP_200_OK)
+            payload = build_response(
+                success=True,
+                code=status.HTTP_200_OK,
+                message="Salepost deleted successfully"
+            )
+            return Response(payload, status=status.HTTP_200_OK)
         except SalePost.DoesNotExist:
-            return Response({'error':'Salepost not found'}, status=status.HTTP_404_NOT_FOUND)
+            payload = build_response(
+                success=True,
+                code=status.HTTP_404_NOT_FOUND,
+                message="Salepost not found"
+            )
+            return Response(payload, status=status.HTTP_404_NOT_FOUND)
 
 """
 class SalePostHomeViewSet(ViewSet):
